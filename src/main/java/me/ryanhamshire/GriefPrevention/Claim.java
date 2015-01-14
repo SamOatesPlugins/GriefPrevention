@@ -503,7 +503,8 @@ public class Claim
 		//admin claims need adminclaims permission only.
 		if(this.isAdminClaim())
 		{
-			if(player.hasPermission("griefprevention.adminclaims")) return null;
+                    return null;
+			//if(player.hasPermission("griefprevention.adminclaims")) return null;
 		}
 		
 		//check for explicit individual container or build permission 
