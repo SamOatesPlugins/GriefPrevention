@@ -235,8 +235,8 @@ public class GriefPrevention extends JavaPlugin {
 		//unless claim block accrual is disabled, start the recurring per 5 minute event to give claim blocks to online players
         //20L ~ 1 second
         if (this.config_claims_blocksAccruedPerHour > 0) {
-            DeliverClaimBlocksTask task = new DeliverClaimBlocksTask(null);
-            this.getServer().getScheduler().scheduleSyncRepeatingTask(this, task, 20L * 60 * 5, 20L * 60 * 5);
+            DeliverClaimBlocksTask task = new DeliverClaimBlocksTask();
+            this.getServer().getScheduler().scheduleSyncRepeatingTask(this, task, 20L * 60 * 10, 20L * 60 * 10);
         }
 
         //start the recurring cleanup event for entities in creative worlds

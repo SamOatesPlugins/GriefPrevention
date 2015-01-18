@@ -18,71 +18,102 @@
 package me.ryanhamshire.GriefPrevention;
 
 import java.util.Collection;
+import java.util.logging.Level;
+import net.milkbowl.vault.economy.Economy;
+import org.bukkit.Bukkit;
 
 import org.bukkit.Location;
+import org.bukkit.Server;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitScheduler;
 
 //FEATURE: give players claim blocks for playing, as long as they're not away from their computer
 //runs every 5 minutes in the main thread, grants blocks per hour / 12 to each online player who appears to be actively playing
 class DeliverClaimBlocksTask implements Runnable {
 
-    private Player player;
+    private final Player player;
+    private final int blocksPerHour;
+    private final int maxAccruedBlocks;
+    private final Economy economy;
+    private final DataStore dataStore;
+    private final PlayerData playerData;
 
-    public DeliverClaimBlocksTask(Player player) {
-        this.player = player;
+    public DeliverClaimBlocksTask() {
+        this.player = null;
+        this.blocksPerHour = GriefPrevention.instance.config_claims_blocksAccruedPerHour / 6;
+        this.maxAccruedBlocks = GriefPrevention.instance.config_claims_maxAccruedBlocks;
+        this.economy = GriefPrevention.economy;
+        this.dataStore = GriefPrevention.instance.dataStore;
+        
+        if (player != null) {
+            this.playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        } else {
+            this.playerData = null;
+        }
     }
 
+    public DeliverClaimBlocksTask(Player player, int blocksPerHour, int maxAccuredBlocks, Economy economy, DataStore dataStore) {
+        this.player = player;
+        this.blocksPerHour = blocksPerHour;
+        this.maxAccruedBlocks = maxAccuredBlocks;
+        this.economy = economy;
+        this.dataStore = dataStore;
+        
+        if (player != null) {
+            this.playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        } else {
+            this.playerData = null;
+        }
+    }
+    
     @Override
     public void run() {
         //if no player specified, this task will create a player-specific task for each online player, scheduled one tick apart
-        if (this.player == null && GriefPrevention.instance.config_claims_blocksAccruedPerHour > 0) {
-            Collection<Player> players = (Collection<Player>) GriefPrevention.instance.getServer().getOnlinePlayers();
+        if (this.player == null && this.blocksPerHour > 0) {
+            final Server server = GriefPrevention.instance.getServer();
+            final Collection<Player> players = (Collection<Player>) server.getOnlinePlayers();
 
-            long i = 0;
+            Bukkit.getLogger().log(Level.INFO, "[GriefPrevention] Performing 'Dellver Claim Blocks'.");
+            
+            int i = 0;
+            final BukkitScheduler scheduler = server.getScheduler();
             for (Player onlinePlayer : players) {
-                DeliverClaimBlocksTask newTask = new DeliverClaimBlocksTask(onlinePlayer);
-                GriefPrevention.instance.getServer().getScheduler().scheduleSyncDelayedTask(GriefPrevention.instance, newTask, i++);
+                DeliverClaimBlocksTask task = new DeliverClaimBlocksTask(onlinePlayer, blocksPerHour, maxAccruedBlocks, economy, dataStore);
+                scheduler.scheduleSyncDelayedTask(GriefPrevention.instance, task, 20L * 10 * (i++));
             }
         } //otherwise, deliver claim blocks to the specified player
         else {
-            DataStore dataStore = GriefPrevention.instance.dataStore;
-            PlayerData playerData = dataStore.getPlayerData(player.getUniqueId());
-
             //if player is over accrued limit, accrued limit was probably reduced in config file AFTER he accrued
             //in that case, leave his blocks where they are
-            int currentTotal = playerData.getAccruedClaimBlocks();
-            if (currentTotal >= GriefPrevention.instance.config_claims_maxAccruedBlocks) {
+            int currentTotal = this.playerData.getAccruedClaimBlocks();
+            if (currentTotal >= this.maxAccruedBlocks) {
                 return;
             }
 
-            Location lastLocation = playerData.lastAfkCheckLocation;
+            Location lastLocation = this.playerData.lastAfkCheckLocation;
             try {
                 //if he's not in a vehicle and has moved at least three blocks since the last check
                 //and he's not being pushed around by fluids
+                final Location location = player.getLocation();                
                 if (!player.isInsideVehicle()
-                        && (lastLocation == null || lastLocation.distanceSquared(player.getLocation()) >= 9)
-                        && !player.getLocation().getBlock().isLiquid()) {
+                        && (lastLocation == null || lastLocation.distanceSquared(location) >= 9)
+                        && !location.getBlock().isLiquid()) {
 
                     //add blocks
-                    int accruedBlocks = GriefPrevention.instance.config_claims_blocksAccruedPerHour / 12;
-                    if (accruedBlocks < 0) {
-                        accruedBlocks = 1;
-                    }
-                    int newTotal = currentTotal + accruedBlocks;
+                    int newTotal = currentTotal + this.blocksPerHour;
 
                     //respect limits
-                    if (newTotal > GriefPrevention.instance.config_claims_maxAccruedBlocks) {
-                        newTotal = GriefPrevention.instance.config_claims_maxAccruedBlocks;
+                    if (newTotal > this.maxAccruedBlocks) {
+                        newTotal = this.maxAccruedBlocks;
                     }
 
-                    playerData.setAccruedClaimBlocks(newTotal);
+                    // Give the blocks
+                    this.playerData.setAccruedClaimBlocks(newTotal);
 
-                    //intentionally NOT saving data here to reduce overall secondary storage access frequency
-                    //many other operations will cause this players data to save, including his eventual logout
-                    //dataStore.savePlayerData(player.getName(), playerData);
-                    
                     // Give some money
-                    GriefPrevention.economy.depositPlayer(player, accruedBlocks * 0.01);
+                    this.economy.depositPlayer(player, this.blocksPerHour * 0.01);
+                    
+                    Bukkit.getLogger().log(Level.INFO, "[GriefPrevention] Given ''{0}'' {1} blocks .", new Object[]{player.getName(), this.blocksPerHour});
                 }
             } catch (IllegalArgumentException e) //can't measure distance when to/from are different worlds
             {
