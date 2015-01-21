@@ -232,11 +232,11 @@ public class GriefPrevention extends JavaPlugin {
         String dataMode = (this.dataStore instanceof FlatFileDataStore) ? "(File Mode)" : "(Database Mode)";
         AddLogEntry("Finished loading data " + dataMode + ".");
 
-		//unless claim block accrual is disabled, start the recurring per 5 minute event to give claim blocks to online players
+        //unless claim block accrual is disabled, start the recurring per 5 minute event to give claim blocks to online players
         //20L ~ 1 second
         if (this.config_claims_blocksAccruedPerHour > 0) {
             DeliverClaimBlocksTask task = new DeliverClaimBlocksTask();
-            this.getServer().getScheduler().scheduleSyncRepeatingTask(this, task, 20L * 60 * 10, 20L * 60 * 10);
+            this.getServer().getScheduler().scheduleSyncRepeatingTask(this, task, 20L * 60 * 5, 20L * 60 * 5);
         }
 
         //start the recurring cleanup event for entities in creative worlds

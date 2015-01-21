@@ -40,7 +40,7 @@ class DeliverClaimBlocksTask implements Runnable {
 
     public DeliverClaimBlocksTask() {
         this.player = null;
-        this.blocksPerHour = GriefPrevention.instance.config_claims_blocksAccruedPerHour / 6;
+        this.blocksPerHour = GriefPrevention.instance.config_claims_blocksAccruedPerHour / 12;
         this.maxAccruedBlocks = GriefPrevention.instance.config_claims_maxAccruedBlocks;
         this.economy = GriefPrevention.economy;
         this.dataStore = GriefPrevention.instance.dataStore;
@@ -79,7 +79,7 @@ class DeliverClaimBlocksTask implements Runnable {
             final BukkitScheduler scheduler = server.getScheduler();
             for (Player onlinePlayer : players) {
                 DeliverClaimBlocksTask task = new DeliverClaimBlocksTask(onlinePlayer, blocksPerHour, maxAccruedBlocks, economy, dataStore);
-                scheduler.scheduleSyncDelayedTask(GriefPrevention.instance, task, 20L * 10 * (i++));
+                scheduler.scheduleSyncDelayedTask(GriefPrevention.instance, task, 20L * 5 * (i++));
             }
         } //otherwise, deliver claim blocks to the specified player
         else {
