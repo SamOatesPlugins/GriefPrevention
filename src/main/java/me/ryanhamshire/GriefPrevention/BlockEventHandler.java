@@ -297,6 +297,9 @@ public class BlockEventHandler implements Listener
 			claim == null)
 		{
 			GriefPrevention.sendMessage(player, TextMode.Warn, Messages.NoTNTDamageAboveSeaLevel);
+                        block.breakNaturally();
+                        placeEvent.setCancelled(true);
+                        return;
 		}
 		
 		//warn players about disabled pistons outside of land claims

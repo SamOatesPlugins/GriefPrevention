@@ -73,8 +73,6 @@ class DeliverClaimBlocksTask implements Runnable {
             final Server server = GriefPrevention.instance.getServer();
             final Collection<Player> players = (Collection<Player>) server.getOnlinePlayers();
 
-            Bukkit.getLogger().log(Level.INFO, "[GriefPrevention] Performing 'Dellver Claim Blocks'.");
-            
             int i = 0;
             final BukkitScheduler scheduler = server.getScheduler();
             for (Player onlinePlayer : players) {
@@ -112,8 +110,6 @@ class DeliverClaimBlocksTask implements Runnable {
 
                     // Give some money
                     this.economy.depositPlayer(player, this.blocksPerHour * 0.01);
-                    
-                    Bukkit.getLogger().log(Level.INFO, "[GriefPrevention] Given ''{0}'' {1} blocks .", new Object[]{player.getName(), this.blocksPerHour});
                 }
             } catch (IllegalArgumentException e) //can't measure distance when to/from are different worlds
             {

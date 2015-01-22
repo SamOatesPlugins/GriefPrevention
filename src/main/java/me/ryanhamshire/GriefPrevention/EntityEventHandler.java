@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
+import org.bukkit.Bukkit;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -28,6 +30,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Animals;
 import org.bukkit.entity.Creature;
 import org.bukkit.entity.Creeper;
 import org.bukkit.entity.Enderman;
@@ -616,14 +619,18 @@ class EntityEventHandler implements Listener {
                     }
                 }
 
+                // Not a player and attacking an animal, cancel
+                if (attacker == null && (subEvent.getEntity() instanceof Animals)) {
+                    Claim claim = this.dataStore.getClaimAt(subEvent.getEntity().getLocation(), false, null);
+                    if (claim != null) {
+                        event.setCancelled(true);
+                    }
+                }
+                    
+                /*
                 Claim cachedClaim = null;
                 PlayerData playerData = null;
-
-                //if not a player or an explosive, allow
-                if (attacker == null && damageSource != null && damageSource.getType() != EntityType.CREEPER && !(damageSource instanceof Explosive)) {
-                    return;
-                }
-
+                
                 if (attacker != null) {
                     playerData = this.dataStore.getPlayerData(attacker.getUniqueId());
                     cachedClaim = playerData.lastClaim;
@@ -668,6 +675,7 @@ class EntityEventHandler implements Listener {
                         }
                     }
                 }
+                */
             }
         }
     }
