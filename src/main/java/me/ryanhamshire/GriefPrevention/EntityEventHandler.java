@@ -620,14 +620,17 @@ class EntityEventHandler implements Listener {
                 }
 
                 // Not a player and attacking an animal, cancel
-                if (attacker == null && (subEvent.getEntity() instanceof Animals)) {
-                    Claim claim = this.dataStore.getClaimAt(subEvent.getEntity().getLocation(), false, null);
-                    if (claim != null) {
-                        event.setCancelled(true);
+                if (subEvent.getEntity() instanceof Animals) {
+                    Claim mobClaim = this.dataStore.getClaimAt(subEvent.getEntity().getLocation(), false, null);
+                    if (attacker == null) {
+                        if (mobClaim != null) {
+                            // Attacker is null, so a mob is attacking, cancel it
+                            event.setCancelled(true);
+                            return;
+                        }   
                     }
                 }
-                    
-                /*
+
                 Claim cachedClaim = null;
                 PlayerData playerData = null;
                 
@@ -675,7 +678,6 @@ class EntityEventHandler implements Listener {
                         }
                     }
                 }
-                */
             }
         }
     }

@@ -232,13 +232,6 @@ public class GriefPrevention extends JavaPlugin {
         String dataMode = (this.dataStore instanceof FlatFileDataStore) ? "(File Mode)" : "(Database Mode)";
         AddLogEntry("Finished loading data " + dataMode + ".");
 
-        //unless claim block accrual is disabled, start the recurring per 5 minute event to give claim blocks to online players
-        //20L ~ 1 second
-        if (this.config_claims_blocksAccruedPerHour > 0) {
-            DeliverClaimBlocksTask task = new DeliverClaimBlocksTask();
-            this.getServer().getScheduler().scheduleSyncRepeatingTask(this, task, 20L * 60 * 5, 20L * 60 * 5);
-        }
-
         //start the recurring cleanup event for entities in creative worlds
         EntityCleanupTask task = new EntityCleanupTask(0);
         this.getServer().getScheduler().scheduleSyncDelayedTask(GriefPrevention.instance, task, 20L);
@@ -288,6 +281,13 @@ public class GriefPrevention extends JavaPlugin {
                 GriefPrevention.AddLogEntry("ERROR: Vault was unable to find a supported economy plugin.  Either install a Vault-compatible economy plugin, or set both of the economy config variables to zero.");
             }
         //}
+            
+        //unless claim block accrual is disabled, start the recurring per 5 minute event to give claim blocks to online players
+        //20L ~ 1 second
+        if (this.config_claims_blocksAccruedPerHour > 0) {
+            DeliverClaimBlocksTask deliveryTask = new DeliverClaimBlocksTask(null);
+            this.getServer().getScheduler().scheduleSyncRepeatingTask(this, deliveryTask, 20L * 60 * 5, 20L * 60 * 5);
+        }
 
         int playersCached = 0;
         OfflinePlayer[] offlinePlayers = this.getServer().getOfflinePlayers();

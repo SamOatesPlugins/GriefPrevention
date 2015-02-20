@@ -17,10 +17,10 @@
  */
 package me.ryanhamshire.GriefPrevention;
 
+import com.graywolf336.jail.JailManager;
+import com.graywolf336.jail.JailsAPI;
 import java.util.Collection;
-import java.util.logging.Level;
 import net.milkbowl.vault.economy.Economy;
-import org.bukkit.Bukkit;
 
 import org.bukkit.Location;
 import org.bukkit.Server;
@@ -38,26 +38,12 @@ class DeliverClaimBlocksTask implements Runnable {
     private final DataStore dataStore;
     private final PlayerData playerData;
 
-    public DeliverClaimBlocksTask() {
-        this.player = null;
+    public DeliverClaimBlocksTask(Player player) {
+        this.player = player;
         this.blocksPerHour = GriefPrevention.instance.config_claims_blocksAccruedPerHour / 12;
         this.maxAccruedBlocks = GriefPrevention.instance.config_claims_maxAccruedBlocks;
         this.economy = GriefPrevention.economy;
         this.dataStore = GriefPrevention.instance.dataStore;
-        
-        if (player != null) {
-            this.playerData = this.dataStore.getPlayerData(player.getUniqueId());
-        } else {
-            this.playerData = null;
-        }
-    }
-
-    public DeliverClaimBlocksTask(Player player, int blocksPerHour, int maxAccuredBlocks, Economy economy, DataStore dataStore) {
-        this.player = player;
-        this.blocksPerHour = blocksPerHour;
-        this.maxAccruedBlocks = maxAccuredBlocks;
-        this.economy = economy;
-        this.dataStore = dataStore;
         
         if (player != null) {
             this.playerData = this.dataStore.getPlayerData(player.getUniqueId());
@@ -76,8 +62,8 @@ class DeliverClaimBlocksTask implements Runnable {
             int i = 0;
             final BukkitScheduler scheduler = server.getScheduler();
             for (Player onlinePlayer : players) {
-                DeliverClaimBlocksTask task = new DeliverClaimBlocksTask(onlinePlayer, blocksPerHour, maxAccruedBlocks, economy, dataStore);
-                scheduler.scheduleSyncDelayedTask(GriefPrevention.instance, task, 20L * 5 * (i++));
+                DeliverClaimBlocksTask task = new DeliverClaimBlocksTask(onlinePlayer);
+                scheduler.scheduleSyncDelayedTask(GriefPrevention.instance, task, 20L * (i++));
             }
         } //otherwise, deliver claim blocks to the specified player
         else {
@@ -87,14 +73,14 @@ class DeliverClaimBlocksTask implements Runnable {
             if (currentTotal >= this.maxAccruedBlocks) {
                 return;
             }
-
+            
             Location lastLocation = this.playerData.lastAfkCheckLocation;
             try {
                 //if he's not in a vehicle and has moved at least three blocks since the last check
                 //and he's not being pushed around by fluids
                 final Location location = player.getLocation();                
                 if (!player.isInsideVehicle()
-                        && (lastLocation == null || lastLocation.distanceSquared(location) >= 9)
+                        && (lastLocation == null || (lastLocation.getWorld() == location.getWorld() && lastLocation.distanceSquared(location) >= 9))
                         && !location.getBlock().isLiquid()) {
 
                     //add blocks
@@ -104,16 +90,26 @@ class DeliverClaimBlocksTask implements Runnable {
                     if (newTotal > this.maxAccruedBlocks) {
                         newTotal = this.maxAccruedBlocks;
                     }
+                    
+                    // If jailed loose blocks mwhahahaha
+                    final JailManager jail = JailsAPI.getJailManager();
+                    if (jail != null) {
+                        if (jail.isPlayerJailed(player.getUniqueId())) {
+                            newTotal = currentTotal - (int)(this.blocksPerHour / 2);
+                            if (newTotal < 0) {
+                                newTotal = 0;
+                            }
+                        }
+                    }
 
                     // Give the blocks
                     this.playerData.setAccruedClaimBlocks(newTotal);
 
                     // Give some money
-                    this.economy.depositPlayer(player, this.blocksPerHour * 0.01);
+                    if (this.economy != null) {
+                        this.economy.depositPlayer(player, this.blocksPerHour * 0.01);
+                    }
                 }
-            } catch (IllegalArgumentException e) //can't measure distance when to/from are different worlds
-            {
-
             } catch (Exception e) {
                 GriefPrevention.AddLogEntry("Problem delivering claim blocks to player " + player.getName() + ":");
                 e.printStackTrace();
